@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+    <head>
+        <script src="player.js"></script>
+    </head>
+    <body>
+        <form>
+            <input type="file" id="file_input" multiple />
+            <input type="button" id="save_file_to_localdb" value="Save File" />
+            <input type="button" id="list_localdb" value="List" />
+        </form>
+
+        <ol id="stored_files"></ol>
+    </body>
+    <script>
+        addEventListener("DOMContentLoaded", (evt) => {
+            var db;
+            const DBOpenRequest = window.indexedDB.open("localplay", 3);
+            DBOpenRequest.onerror = (evt) => {
+                console.log(evt);
+            };
+            DBOpenRequest.onsuccess = (evt) => {
+                db = DBOpenRequest.result;
+                // console.log(db);
+                // console.log(db.objectStoreNames);
+            };
+            DBOpenRequest.onupgradeneeded = (evt) => {
+                db = evt.target.result;
+                console.log("upgrade needed");
+                const objStore = db.createObjectStore("mediaFiles", {
+                    autoIncrement: true,
+                });
+            };
+
+            let fl = document.getElementById("stored_files");
+            // connect to indexdb
+            // list all files to list
+
+            let fi = document.getElementById("file_input");
+            fi.addEventListener("change", (evt) => {
+                console.log(evt);
+            });
+
+            let sb = document.getElementById("save_file_to_localdb");
+            sb.addEventListener("click", (evt) => {
+                // check if fi holds a file
+                if (!fi.value) {
+                    console.log("No file selected");
+                    return;
+                }
+                console.log(fi.files);
+                // save the file to indexdb
+                //
+                // File {
+                //   name,
+                //   lastmodified,
+                //   size,
+                //   type, // MIME
+                // }
+                // this next line needs to be identical to the creation logic...
+
+                // console.log(objSto.indexNames);
+                // console.log(objSto.keyPath);
+                // console.log(objSto.name);
+                // console.log(objSto.transaction);
+                // console.log(objSto.autoIncrement);
+
+                for (let i = 0; i < fi.files.length; i++) {
+                    // console.log(fi.files[i]);
+                    var mf = {
+                        name: fi.files[i].name,
+                        lastModified: fi.files[i].lastModified,
+                        size: fi.files[i].size,
+                        type: fi.files[i].type,
+                    };
+                    const fr = new FileReader();
+                    fr.onload = () => {
+                        const transaction = db.transaction(
+                            "mediaFiles",
+                            "readwrite",
+                        );
+                        const objSto = transaction.objectStore("mediaFiles", {
+                            autoIncrement: true,
+                        });
+
+                        mf.data = fr.result;
+                        console.log(mf);
+                        4;
+                        const objStoReq = objSto.add(mf);
+                        objStoReq.onsuccess = (evt) => {
+                            console.log(evt);
+                        };
+                    };
+                    fr.readAsArrayBuffer(fi.files[i]);
+
+                    // let fab = fi.files[i].arrayBuffer().then(
+
+                    // );
+                    // fab.onsuccess = (evt) => {
+                    // mf.data = fab;
+                    // };
+                }
+
+                // const objStoReq = objSto.add(mf, "key");
+                // const objStoReq = objSto.add(fi.files);
+                // const objStoReq = objSto.add(Array.from(fi.files));
+
+                // reload page
+                // console.log(evt);
+            });
+            let li = document.getElementById("list_localdb");
+            let sf = document.getElementById("stored_files");
+            li.addEventListener("click", (evt) => {
+                const objSto = db
+                    .transaction("mediaFiles")
+                    .objectStore("mediaFiles");
+
+                objSto.openCursor().onsuccess = (evt) => {
+                    const cursor = evt.target.result;
+                    if (!cursor) {
+                        return;
+                    }
+                    const { name, size } = cursor.value;
+                    let li1 = document.createElement("li");
+                    li1.innerText = `${name} (${size})`;
+                    sf.appendChild(li1);
+                    cursor.continue();
+                };
+            });
+        });
+    </script>
+</html>

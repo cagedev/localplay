@@ -2,6 +2,18 @@
 <html>
     <head>
         <script src="player.js"></script>
+        <script src="mediafile.js"></script>
+        <style>
+            table {
+                font-family:
+                    JetBrainsMono Nerd Font Mono,
+                    monospace;
+                font-size: x-small;
+            }
+            th {
+                text-align: left;
+            }
+        </style>
     </head>
     <body>
         <form>
@@ -10,19 +22,18 @@
             <input type="button" id="list_localdb" value="List" />
         </form>
 
-        <ol id="stored_files"></ol>
+        <table id="stored_files"></table>
     </body>
     <script>
+        var db;
         addEventListener("DOMContentLoaded", (evt) => {
-            var db;
             const DBOpenRequest = window.indexedDB.open("localplay", 3);
             DBOpenRequest.onerror = (evt) => {
                 console.log(evt);
             };
             DBOpenRequest.onsuccess = (evt) => {
                 db = DBOpenRequest.result;
-                // console.log(db);
-                // console.log(db.objectStoreNames);
+                console.log(db);
             };
             DBOpenRequest.onupgradeneeded = (evt) => {
                 db = evt.target.result;
@@ -33,9 +44,6 @@
             };
 
             let fl = document.getElementById("stored_files");
-            // connect to indexdb
-            // list all files to list
-
             let fi = document.getElementById("file_input");
             fi.addEventListener("change", (evt) => {
                 console.log(evt);
@@ -48,33 +56,17 @@
                     console.log("No file selected");
                     return;
                 }
-                console.log(fi.files);
-                // save the file to indexdb
-                //
-                // File {
-                //   name,
-                //   lastmodified,
-                //   size,
-                //   type, // MIME
-                // }
-                // this next line needs to be identical to the creation logic...
-
-                // console.log(objSto.indexNames);
-                // console.log(objSto.keyPath);
-                // console.log(objSto.name);
-                // console.log(objSto.transaction);
-                // console.log(objSto.autoIncrement);
 
                 for (let i = 0; i < fi.files.length; i++) {
-                    // console.log(fi.files[i]);
-                    var mf = {
-                        name: fi.files[i].name,
-                        lastModified: fi.files[i].lastModified,
-                        size: fi.files[i].size,
-                        type: fi.files[i].type,
-                    };
+                    // TODO use MediaFile
+                    const mf = new MediaFile(
+                        fi.files[i].name,
+                        fi.files[i].type,
+                        fi.files[i].lastModified,
+                        fi.files[i].size,
+                    );
                     const fr = new FileReader();
-                    fr.onload = () => {
+                    fr.onload = (evt) => {
                         const transaction = db.transaction(
                             "mediaFiles",
                             "readwrite",
@@ -84,29 +76,13 @@
                         });
 
                         mf.data = fr.result;
-                        console.log(mf);
-                        4;
                         const objStoReq = objSto.add(mf);
                         objStoReq.onsuccess = (evt) => {
-                            console.log(evt);
+                            console.log(mf);
                         };
                     };
                     fr.readAsArrayBuffer(fi.files[i]);
-
-                    // let fab = fi.files[i].arrayBuffer().then(
-
-                    // );
-                    // fab.onsuccess = (evt) => {
-                    // mf.data = fab;
-                    // };
                 }
-
-                // const objStoReq = objSto.add(mf, "key");
-                // const objStoReq = objSto.add(fi.files);
-                // const objStoReq = objSto.add(Array.from(fi.files));
-
-                // reload page
-                // console.log(evt);
             });
             let li = document.getElementById("list_localdb");
             let sf = document.getElementById("stored_files");
@@ -115,15 +91,34 @@
                     .transaction("mediaFiles")
                     .objectStore("mediaFiles");
 
+                // clear filelist and add header
+                // use a description "MediaFile"-like for setting the header
+                sf.replaceChildren(
+                    createTrFromMediaFile(
+                        {
+                            name: "Name",
+                            lastModified: "Last Modified",
+                            size: "Size",
+                            type: "Type",
+                        },
+                        (hdr = true),
+                    ),
+                );
+
                 objSto.openCursor().onsuccess = (evt) => {
                     const cursor = evt.target.result;
                     if (!cursor) {
                         return;
                     }
-                    const { name, size } = cursor.value;
-                    let li1 = document.createElement("li");
-                    li1.innerText = `${name} (${size})`;
-                    sf.appendChild(li1);
+                    let mf = cursor.value;
+                    mf.key = cursor.key;
+
+                    // use the object... not really required...
+                    Object.setPrototypeOf(mf, MediaFile.prototype);
+                    console.log(mf instanceof MediaFile);
+
+                    let tr = createTrFromMediaFile(mf);
+                    sf.appendChild(tr);
                     cursor.continue();
                 };
             });

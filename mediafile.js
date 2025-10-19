@@ -50,7 +50,10 @@ function createTrFromMediaFile(mf, hdr = false, mnl = 24, mtl = 12) {
 
   let thActions = document.createElement(tn);
   // thSize.innerText = mf.size;
-  thActions.innerHTML = hdr ? "Actions" : `<a>${mf.key}</a>`;
+  thActions.innerHTML = hdr
+    ? "Actions"
+    : `<a class="action" onclick="getMediaFile(db, ${mf.key}, downloadMediaFile);">dl</a>
+    <a class="action" onclick="getMediaFile(db, ${mf.key}, playMediaFile, player);">play</a>`;
   tr.appendChild(thActions);
 
   return tr;

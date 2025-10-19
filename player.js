@@ -42,16 +42,29 @@ function playMediaFile(mf, pel) {
   // TODO check validity
   // TODO handle other filetypes; use mf.type
   let p = pel[0];
+  const blob = new Blob([mf.data], { type: mf.type });
+  const rdr = new FileReader();
 
   switch (mf.type.split("/")[0]) {
     case "image":
       let img = document.createElement("img");
+      img.style = "max-width: 100%";
       p.replaceChildren(img);
 
-      const blob = new Blob([mf.data], { type: mf.type });
-      const rdr = new FileReader();
       rdr.addEventListener("load", () => {
         img.src = rdr.result;
+      });
+      rdr.readAsDataURL(blob);
+      break;
+    case "video":
+      let vid = document.createElement("video");
+      vid.controls = true;
+      vid.autoplay = true;
+      vid.style = "max-width: 100%";
+      p.replaceChildren(vid);
+
+      rdr.addEventListener("load", () => {
+        vid.src = rdr.result;
       });
       rdr.readAsDataURL(blob);
       break;
